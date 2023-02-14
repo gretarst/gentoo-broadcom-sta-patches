@@ -1,7 +1,8 @@
-From 31b7849092c43805c7fbaf7518b99874aa1b310c Mon Sep 17 00:00:00 2001
+From 24eeb26f0febb213e8adffde2d4c50267a7c2767 Mon Sep 17 00:00:00 2001
 From: Joan Bruguera <joanbrugueram@gmail.com>
 Date: Wed, 12 Jan 2022 20:49:20 +0100
 Subject: [PATCH] Tentative fix for broadcom-wl 6.30.223.271 driver for Linux 5.17-rc1
+Origin: https://gist.github.com/joanbm/37fd0590f30b41e7e89ade6e242ca16e
 
 Set netdev->dev_addr through dev_addr_mod + PDE_DATA fix
 
@@ -16,12 +17,16 @@ Applies on top of all the patches applied to broadcom-wl-dkms 6.30.223.271-28 on
 
 See also: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=adeef3e32146a8d2a73c399dc6f5d76a449131b1
           https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=359745d78351c6f5442435f81549f0207ece28aa
+
+Adapted to apply on top of gentoo patches by tka.
+
+Signed-off-by: Timo Kamph <tka@kamph.org>
 ---
  src/wl/sys/wl_linux.c | 16 +++++++++++++---
  1 file changed, 13 insertions(+), 3 deletions(-)
 
 diff --git a/src/wl/sys/wl_linux.c b/src/wl/sys/wl_linux.c
-index e491df7..e4614fb 100644
+index 7ba336f..0537ec8 100644
 --- a/src/wl/sys/wl_linux.c
 +++ b/src/wl/sys/wl_linux.c
 @@ -93,6 +93,10 @@ struct iw_statistics *wl_get_wireless_stats(struct net_device *dev);
@@ -32,10 +37,10 @@ index e491df7..e4614fb 100644
 +#define PDE_DATA pde_data
 +#endif
 +
- #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
- static void wl_timer(struct timer_list *tl);
+ #ifdef HAVE_TIMER_SETUP
+ static void wl_timer(struct timer_list *list);
  #else
-@@ -490,6 +494,12 @@ wl_if_setup(struct net_device *dev)
+@@ -493,6 +497,12 @@ wl_if_setup(struct net_device *dev)
  #endif
  }
  
@@ -48,7 +53,7 @@ index e491df7..e4614fb 100644
  static wl_info_t *
  wl_attach(uint16 vendor, uint16 device, ulong regs,
  	uint bustype, void *btparam, uint irq, uchar* bar1_addr, uint32 bar1_size)
-@@ -634,7 +644,7 @@ wl_attach(uint16 vendor, uint16 device, ulong regs,
+@@ -644,7 +654,7 @@ wl_attach(uint16 vendor, uint16 device, ulong regs,
  			WL_ERROR(("wl%d: Error setting MAC ADDRESS\n", unit));
  	}
  #endif 
@@ -57,7 +62,7 @@ index e491df7..e4614fb 100644
  
  	online_cpus = 1;
  
-@@ -1835,7 +1845,7 @@ wl_set_mac_address(struct net_device *dev, void *addr)
+@@ -1850,7 +1860,7 @@ wl_set_mac_address(struct net_device *dev, void *addr)
  
  	WL_LOCK(wl);
  
@@ -66,7 +71,7 @@ index e491df7..e4614fb 100644
  	err = wlc_iovar_op(wl->wlc, "cur_etheraddr", NULL, 0, sa->sa_data, ETHER_ADDR_LEN,
  		IOV_SET, (WL_DEV_IF(dev))->wlcif);
  	WL_UNLOCK(wl);
-@@ -3010,7 +3020,7 @@ _wl_add_monitor_if(wl_task_t *task)
+@@ -3029,7 +3039,7 @@ _wl_add_monitor_if(wl_task_t *task)
  	else
  		dev->type = ARPHRD_IEEE80211_RADIOTAP;
  
