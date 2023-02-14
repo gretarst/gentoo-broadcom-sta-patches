@@ -1,14 +1,3 @@
-From 0b888bf115612074df99654140a1980111c29748 Mon Sep 17 00:00:00 2001
-From: Antoine Cotten <tonio.cotten@gmail.com>
-Date: Fri, 7 Jul 2017 15:17:47 +0200
-Subject: [PATCH] Apply patch from Debian bug #867258
-
-Compile fix with kernel 4.12
-https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=867258
----
- src/wl/sys/wl_cfg80211_hybrid.c | 29 +++++++++++++++++++++++++----
- 1 file changed, 25 insertions(+), 4 deletions(-)
-
 diff --git a/src/wl/sys/wl_cfg80211_hybrid.c b/src/wl/sys/wl_cfg80211_hybrid.c
 index c46944a..1a9840a 100644
 --- a/src/wl/sys/wl_cfg80211_hybrid.c
