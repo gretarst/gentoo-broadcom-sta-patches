@@ -1,30 +1,3 @@
-From 24eeb26f0febb213e8adffde2d4c50267a7c2767 Mon Sep 17 00:00:00 2001
-From: Joan Bruguera <joanbrugueram@gmail.com>
-Date: Wed, 12 Jan 2022 20:49:20 +0100
-Subject: [PATCH] Tentative fix for broadcom-wl 6.30.223.271 driver for Linux 5.17-rc1
-Origin: https://gist.github.com/joanbm/37fd0590f30b41e7e89ade6e242ca16e
-
-Set netdev->dev_addr through dev_addr_mod + PDE_DATA fix
-
-Since Linux 5.17 netdev->dev_addr is const and must be changed through
-dev_addr_mod, otherwise a warning is logged in dmesg and bad things may happen.
-
-NB: The #if is not wrong, dev_addr_mod is defined since Linux 5.15-rc1
-
-Plus a trivial fix for PDE_DATA.
-
-Applies on top of all the patches applied to broadcom-wl-dkms 6.30.223.271-28 on Arch Linux.
-
-See also: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=adeef3e32146a8d2a73c399dc6f5d76a449131b1
-          https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=359745d78351c6f5442435f81549f0207ece28aa
-
-Adapted to apply on top of gentoo patches by tka.
-
-Signed-off-by: Timo Kamph <tka@kamph.org>
----
- src/wl/sys/wl_linux.c | 16 +++++++++++++---
- 1 file changed, 13 insertions(+), 3 deletions(-)
-
 diff --git a/src/wl/sys/wl_linux.c b/src/wl/sys/wl_linux.c
 index 7ba336f..0537ec8 100644
 --- a/src/wl/sys/wl_linux.c
@@ -80,5 +53,3 @@ index 7ba336f..0537ec8 100644
  
  #if defined(WL_USE_NETDEV_OPS)
  	dev->netdev_ops = &wl_netdev_monitor_ops;
--- 
-2.35.1
