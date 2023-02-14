@@ -1,90 +1,54 @@
-diff -Nurp -u -r a/src/wl/sys/wl_cfg80211_hybrid.c b/src/wl/sys/wl_cfg80211_hybrid.c
---- a/src/wl/sys/wl_cfg80211_hybrid.c	2022-12-12 00:23:30.821615599 +0000
-+++ b/src/wl/sys/wl_cfg80211_hybrid.c	2022-12-12 00:35:47.854975024 +0000
-@@ -105,14 +105,28 @@ static s32 wl_cfg80211_get_tx_power(stru
- static s32 wl_cfg80211_get_tx_power(struct wiphy *wiphy, s32 *dbm);
- #endif
+--- a/src/wl/sys/wl_cfg80211_hybrid.c	2022-12-14 08:58:10.974438882 -0700
++++ b/src/wl/sys/wl_cfg80211_hybrid.c	2022-12-14 12:52:12.381689207 -0700
+@@ -791,6 +791,7 @@
+ 		break;
+ 	case NL80211_AUTHTYPE_NETWORK_EAP:
+ 		WL_DBG(("network eap\n"));
++		break;
+ 	default:
+ 		val = 2;
+ 		WL_ERR(("invalid auth type (%d)\n", sme->auth_type));
+@@ -2348,24 +2349,34 @@
+                     const wl_event_msg_t *e, void *data)
+ {
+ 	struct wl_cfg80211_connect_info *conn_info = wl_to_conn(wl);
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
+-	struct cfg80211_roam_info roam_info = {};
+-#endif
+ 	s32 err = 0;
+-
+-	wl_get_assoc_ies(wl);
+-	memcpy(wl->profile->bssid, &e->addr, ETHER_ADDR_LEN);
+-	memcpy(&wl->bssid, &e->addr, ETHER_ADDR_LEN);
+-	wl_update_bss_info(wl);
+-
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
++ 	struct cfg80211_bss *bss;
++ 	struct wlc_ssid *ssid;
++	struct cfg80211_roam_info roam_info;
++ 	ssid = &wl->profile->ssid;
++ 	bss = cfg80211_get_bss(wl_to_wiphy(wl), NULL, (s8 *)&wl->bssid,
++ 	ssid->SSID, ssid->SSID_len, WLAN_CAPABILITY_ESS, WLAN_CAPABILITY_ESS);
++	// Rel. commit "cfg80211: Indicate MLO connection info in connect and roam callbacks" (Veerendranath Jakkam, Wed Jun 8)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
++	roam_info.bss = bss;
+ 	roam_info.channel = &wl->conf->channel,
+ 	roam_info.bssid = (u8 *)&wl->bssid,
++#else
++	roam_info.links[0].bss = bss;
++#endif
+ 	roam_info.req_ie = conn_info->req_ie,
+ 	roam_info.req_ie_len = conn_info->req_ie_len,
+ 	roam_info.resp_ie = conn_info->resp_ie,
+ 	roam_info.resp_ie_len = conn_info->resp_ie_len,
++#endif
  
--#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 38)
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-+static s32 wl_cfg80211_config_default_key(struct wiphy *wiphy,
-+           struct net_device *dev, int link_id, u8 key_idx, bool unicast,
-+           bool multicast);
-+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 38)
- static s32 wl_cfg80211_config_default_key(struct wiphy *wiphy,
-            struct net_device *dev, u8 key_idx, bool unicast, bool multicast);
++	wl_get_assoc_ies(wl);
++	memcpy(wl->profile->bssid, &e->addr, ETHER_ADDR_LEN);
++	memcpy(&wl->bssid, &e->addr, ETHER_ADDR_LEN);
++	wl_update_bss_info(wl);
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
+ 	cfg80211_roamed(ndev, &roam_info, GFP_KERNEL);
  #else
- static s32 wl_cfg80211_config_default_key(struct wiphy *wiphy,
-            struct net_device *dev, u8 key_idx);
- #endif
--#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-+static s32 wl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *dev,
-+           int link_id, u8 key_idx, bool pairwise, const u8 *mac_addr,
-+           struct key_params *params);
-+static s32 wl_cfg80211_del_key(struct wiphy *wiphy, struct net_device *dev,
-+           int link_id, u8 key_idx, bool pairwise, const u8 *mac_addr);
-+static s32 wl_cfg80211_get_key(struct wiphy *wiphy, struct net_device *dev,
-+           int link_id, u8 key_idx, bool pairwise, const u8 *mac_addr,
-+           void *cookie,
-+           void (*callback) (void *cookie, struct key_params *params));
-+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)
- static s32 wl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *dev,
-            u8 key_idx, bool pairwise, const u8 *mac_addr, struct key_params *params);
- static s32 wl_cfg80211_del_key(struct wiphy *wiphy, struct net_device *dev,
-@@ -1161,7 +1175,12 @@ static s32 wl_cfg80211_get_tx_power(stru
- 	return err;
- }
- 
--#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 38)
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-+static s32
-+wl_cfg80211_config_default_key(struct wiphy *wiphy,
-+	struct net_device *dev, int link_id, u8 key_idx, bool unicast,
-+	bool multicast)
-+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 38)
- static s32
- wl_cfg80211_config_default_key(struct wiphy *wiphy,
- 	struct net_device *dev, u8 key_idx, bool unicast, bool multicast)
-@@ -1186,7 +1205,12 @@ wl_cfg80211_config_default_key(struct wi
- 	return 0;
- }
- 
--#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-+static s32
-+wl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *dev,
-+                    int link_id, u8 key_idx, bool pairwise, const u8 *mac_addr,
-+                    struct key_params *params)
-+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)
- static s32
- wl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *dev,
-                     u8 key_idx, bool pairwise, const u8 *mac_addr, struct key_params *params)
-@@ -1307,7 +1331,11 @@ wl_cfg80211_add_key(struct wiphy *wiphy,
- 	return err;
- }
- 
--#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-+static s32
-+wl_cfg80211_del_key(struct wiphy *wiphy, struct net_device *dev,
-+                    int link_id, u8 key_idx, bool pairwise, const u8 *mac_addr)
-+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)
- static s32
- wl_cfg80211_del_key(struct wiphy *wiphy, struct net_device *dev,
-                     u8 key_idx, bool pairwise, const u8 *mac_addr)
-@@ -1350,7 +1378,13 @@ wl_cfg80211_del_key(struct wiphy *wiphy,
- 	return err;
- }
- 
--#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-+static s32
-+wl_cfg80211_get_key(struct wiphy *wiphy, struct net_device *dev,
-+                    int link_id, u8 key_idx, bool pairwise, const u8 *mac_addr,
-+                    void *cookie,
-+                    void (*callback) (void *cookie, struct key_params * params))
-+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)
- static s32
- wl_cfg80211_get_key(struct wiphy *wiphy, struct net_device *dev,
-                     u8 key_idx, bool pairwise, const u8 *mac_addr, void *cookie,
+ 	cfg80211_roamed(ndev,
